@@ -3,8 +3,11 @@ const Joi = require("joi");
 // Validator for registration data
 const validateRegistration = (req, res, next) => {
   const schema = Joi.object({
-    username: Joi.string().required(),
+    firstName: Joi.string().required(),
+    lastName: Joi.string().required(),
+    email: Joi.string().required(),
     password: Joi.string().required(),
+    description: Joi.string().required(),
     role: Joi.string().valid("Coder", "Manager").required(),
   });
 
@@ -18,7 +21,7 @@ const validateRegistration = (req, res, next) => {
 // Validator for login data
 const validateLogin = (req, res, next) => {
   const schema = Joi.object({
-    username: Joi.string().required(),
+    email: Joi.string().required(),
     password: Joi.string().required(),
   });
 
@@ -35,13 +38,15 @@ const validateChallengeCreation = (req, res, next) => {
     title: Joi.string().required(),
     category: Joi.string().required(),
     description: Joi.string().required(),
-    level: Joi.string().valid("Easy", "Medium", "Hard").required(),
+    difficulty_level: Joi.string().valid("Easy", "Medium", "Hard").required(),
     code: Joi.object({
       function_name: Joi.string().required(),
       code_text: Joi.array()
         .items(
           Joi.object({
-            language: Joi.string().valid("py", "js").required(),
+            language: Joi.string()
+              .valid("py", "js", "c", "lua", "php", "java")
+              .required(),
             text: Joi.string().required(),
           })
         )
@@ -55,27 +60,26 @@ const validateChallengeCreation = (req, res, next) => {
         )
         .required(),
     }).required(),
-    tests: Joi.array()
-      .items(
-        Joi.object({
-          weight: Joi.number().required(),
-          inputs: Joi.array()
-            .items(
-              Joi.object({
-                name: Joi.string().required(),
-                value: Joi.any().required(),
-              })
-            )
-            .required(),
-          output: Joi.any().required(),
-        })
-      )
-      .required(),
+    tests: Joi.array().items(
+      Joi.object({
+        weight: Joi.number().required(),
+        inputs: Joi.array()
+          .items(
+            Joi.object({
+              name: Joi.string().required(),
+              value: Joi.any().required(),
+            })
+          )
+          .required(),
+        output: Joi.any().required(),
+      })
+    ),
+    manager: Joi.required(),
   });
 
   const { error } = schema.validate(req.body);
   if (error) {
-    return next(error);
+    return res.status(400).json({ error: error.details[0].message });
   }
   next();
 };

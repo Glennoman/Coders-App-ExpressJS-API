@@ -1,13 +1,14 @@
 // Import libraries
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { User } = require("../models/User");
 
 // Mock database
 const users = [];
 
 // Function to handle user registration
 const register = (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, email, password, role } = req.body;
 
   // Hash the password for security
   const hashedPassword = bcrypt.hashSync(password, 10);
@@ -15,6 +16,7 @@ const register = (req, res) => {
   // Create new user object
   const newUser = {
     id: users.length + 1,
+    email,
     username,
     password: hashedPassword,
     role,
@@ -28,30 +30,89 @@ const register = (req, res) => {
     .json({ message: "User registered successfully", user: newUser });
 };
 
-// Function to handle user login
-const login = (req, res) => {
-  const { username, password } = req.body;
+// Creating new coder
+const registerCoder = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, description } = req.body;
 
-  // Find the user in the mock database
-  const user = users.find((u) => u.username === username);
+    const hashedPassword = bcrypt.hashSync(password, 10);
 
-  if (!user) {
-    return res.status(400).json({ error: "Invalid username or password" });
+    const newCoder = new User({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      description,
+      role: "Coder",
+    });
+
+    await newCoder.save();
+
+    res
+      .status(201)
+      .json({ message: "Coder registered successfully", coder: newCoder });
+  } catch (error) {
+    res.status(500).json({ error });
   }
-
-  // Check if the password is correct
-  const isPasswordValid = bcrypt.compareSync(password, user.password);
-
-  if (!isPasswordValid) {
-    return res.status(400).json({ error: "Invalid username or password" });
-  }
-
-  // Create a token for the user
-  const token = jwt.sign({ id: user.id, role: user.role }, "secretKey", {
-    expiresIn: "1h",
-  });
-
-  res.json({ message: "Login successful", token });
 };
 
-module.exports = { register, login };
+// Creating new manager
+const registerManager = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, description } = req.body;
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
+    const newManager = new User({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      description,
+      role: "Manager",
+    });
+
+    await newManager.save();
+
+    res
+      .status(201)
+      .json({ message: "Manager registered succesfully", manager: newManager });
+  } catch (error) {
+    res.status(500).json({ error });
+  }
+};
+
+// Function to handle user login
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find the user in the mock database
+    const userLogin = await User.findOne({ email });
+
+    // If User not found
+    if (!userLogin) {
+      return res.status(400).json({ error: "Invalid username" });
+    }
+
+    // Check if the password is correct
+    const isPasswordValid = bcrypt.compareSync(password, userLogin.password);
+
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: "Invalid password" });
+    }
+
+    // Create a token for the user
+    const token = jwt.sign(
+      { id: userLogin._id, role: userLogin.role },
+      "secretKey",
+      { expiresIn: "1h" }
+    );
+
+    res.json({ message: "Login successful", token });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { register, registerCoder, registerManager, login };
